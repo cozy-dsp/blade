@@ -4,6 +4,7 @@ use std::ops::{Add, Mul, Sub};
 use std::simd::f32x2;
 
 /// A simple biquad filter with functions for generating coefficients for an all-pass filter.
+/// Stolen from NIH-Plug examples
 ///
 /// Based on <https://en.wikipedia.org/wiki/Digital_biquad_filter#Transposed_direct_forms>.
 ///
@@ -88,30 +89,10 @@ impl<T: SimdType> BiquadCoefficients<T> {
         })
     }
 
-    /// Compute the coefficients for an all-pass filter.
+
+    /// Compute the coefficients for a bandpass filter.
     ///
     /// Based on <http://shepazu.github.io/Audio-EQ-Cookbook/audio-eq-cookbook.html>.
-    pub fn allpass(sample_rate: f32, frequency: f32, q: f32) -> Self {
-        nih_debug_assert!(sample_rate > 0.0);
-        nih_debug_assert!(frequency > 0.0);
-        nih_debug_assert!(frequency < sample_rate / 2.0);
-        nih_debug_assert!(q > 0.0);
-
-        let omega0 = consts::TAU * (frequency / sample_rate);
-        let cos_omega0 = omega0.cos();
-        let alpha = omega0.sin() / (2.0 * q);
-
-        // We'll prenormalize everything with a0
-        let a0 = 1.0 + alpha;
-        let b0 = (1.0 - alpha) / a0;
-        let b1 = (-2.0 * cos_omega0) / a0;
-        let b2 = (1.0 + alpha) / a0;
-        let a1 = (-2.0 * cos_omega0) / a0;
-        let a2 = (1.0 - alpha) / a0;
-
-        Self::from_f32s(BiquadCoefficients { b0, b1, b2, a1, a2 })
-    }
-
     pub fn bandpass(sample_rate: f32, frequency: f32, q: f32) -> Self {
         nih_debug_assert!(sample_rate > 0.0);
         nih_debug_assert!(frequency > 0.0);
@@ -144,6 +125,6 @@ impl SimdType for f32 {
 impl SimdType for f32x2 {
     #[inline(always)]
     fn from_f32(value: f32) -> Self {
-        f32x2::splat(value)
+        Self::splat(value)
     }
 }

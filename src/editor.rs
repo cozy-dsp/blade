@@ -1,22 +1,24 @@
 use std::io::Cursor;
-use std::iter::Iterator;
 use std::sync::Arc;
 use image::codecs::gif::GifDecoder;
 use image::{AnimationDecoder, ImageFormat};
-use nih_plug::params::Param;
 use nih_plug::prelude::Editor;
 use nih_plug_egui::{create_egui_editor, EguiState};
-use nih_plug_egui::egui::{Align, Button, CentralPanel, Color32, Frame, Image, ImageSource, Label, Layout, Rounding, Sense, Style, TopBottomPanel, Window};
-use nih_plug_egui::egui::ecolor::Hsva;
-use nih_plug_egui::egui::epaint::Shadow;
-use nih_plug_egui::widgets::{generic_ui, ParamSlider};
-use nih_plug_egui::widgets::generic_ui::GenericSlider;
+use nih_plug_egui::egui::{Align, CentralPanel, Frame, Image, ImageSource, Label, Layout, Sense, TopBottomPanel};
+
 use stopwatch::Stopwatch;
 use crate::{BLADEParams, FanSpeed};
+
+#[cfg(feature = "plus")]
+use nih_plug_egui::widgets::generic_ui;
+#[cfg(feature = "plus")]
+use nih_plug_egui::widgets::generic_ui::GenericSlider;
+use nih_plug_egui::egui::{Button, Color32, Rounding, Style, Window, ecolor::Hsva, epaint::Shadow};
 
 struct EditorState {
     gif_frame: usize,
     stopwatch: Stopwatch,
+    show_credits_window: bool,
     #[cfg(feature = "plus")]
     show_settings_window: bool
 }
@@ -26,17 +28,18 @@ impl EditorState {
         Self {
             gif_frame: 0,
             stopwatch: Stopwatch::start_new(),
+            show_credits_window: false,
             #[cfg(feature = "plus")]
             show_settings_window: false
         }
     }
 }
 
-pub(crate) fn default_state() -> Arc<EguiState> {
+pub fn default_state() -> Arc<EguiState> {
     EguiState::from_size(398, 520)
 }
 
-pub(crate) fn create(params: Arc<BLADEParams>, editor_state: Arc<EguiState>) -> Option<Box<dyn Editor>> {
+pub fn create(params: Arc<BLADEParams>, editor_state: Arc<EguiState>) -> Option<Box<dyn Editor>> {
     let image = GifDecoder::new(&include_bytes!("../assets/fan-spinning.gif")[..]).unwrap();
     let mut frames = Vec::default();
     for (idx, frame) in image.into_frames().enumerate() {
@@ -59,12 +62,13 @@ pub(crate) fn create(params: Arc<BLADEParams>, editor_state: Arc<EguiState>) -> 
         if params.speed.value() != FanSpeed::Off && state.stopwatch.elapsed_ms() >= frame_time {
             state.stopwatch.restart();
             state.gif_frame += 1;
-            state.gif_frame = state.gif_frame % (frames.len() - 1);
+            state.gif_frame %= frames.len() - 1;
         }
 
         TopBottomPanel::bottom("info").show(ctx, |ui| {
             ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
                 ui.add(Label::new("METALWINGS DSP, 2024"));
+                state.show_credits_window = state.show_credits_window || ui.add(Button::new("CREDITS")).clicked();
                 #[cfg(feature = "plus")]
                 {
                     state.show_settings_window = state.show_settings_window || ui.add(Button::new("SETTINGS")).clicked();
@@ -85,16 +89,22 @@ pub(crate) fn create(params: Arc<BLADEParams>, editor_state: Arc<EguiState>) -> 
                 setter.end_set_parameter(&params.speed);
             };
 
+            let mut style = Style::default();
+            style.spacing.indent = 0.;
+            style.visuals.window_shadow = Shadow::NONE;
+            style.visuals.window_rounding = Rounding::ZERO;
+            style.visuals.window_stroke.width = 2.0;
+            style.visuals.window_stroke.color = Color32::from(Hsva::new((ctx.frame_nr() % 100) as f32 / 100.0, 1., 1., 1.));
+
+            Window::new("CREDITS").frame(Frame::popup(&style)).collapsible(false).open(&mut state.show_credits_window).show(ctx, |ui| {
+                ui.add(Label::new("BLADE"));
+                ui.add(Label::new("original concept by axo1otl"));
+                ui.add(Label::new("plugin by DRACONIUM"));
+                ui.add(Label::new("licensed under GPLv3 (thanks steinberg!)"));
+            });
+
             #[cfg(feature = "plus")]
             {
-                let mut style = Style::default();
-                style.spacing.indent = 0.;
-                style.visuals.window_shadow = Shadow::NONE;
-                style.visuals.window_rounding = Rounding::ZERO;
-                style.visuals.window_stroke.width = 2.0;
-                style.visuals.window_stroke.color = Color32::from(Hsva::new((ctx.frame_nr() % 1000) as f32 / 1000.0, 1., 1., 1.));
-
-
                 Window::new("SETTINGS").frame(Frame::menu(&style)).collapsible(false).open(&mut state.show_settings_window).show(ctx, |ui| {
                     generic_ui::create(ui, params.clone(), setter, GenericSlider);
                 });

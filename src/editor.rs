@@ -4,7 +4,7 @@ use image::codecs::gif::GifDecoder;
 use image::{AnimationDecoder, ImageFormat};
 use nih_plug::prelude::Editor;
 use nih_plug_egui::{create_egui_editor, EguiState};
-use nih_plug_egui::egui::{Align, CentralPanel, Frame, Image, ImageSource, Label, Layout, Sense, TopBottomPanel};
+use nih_plug_egui::egui::{Align, CentralPanel, Frame, Image, ImageSource, Label, Layout, RichText, Sense, TopBottomPanel};
 
 use stopwatch::Stopwatch;
 use crate::{BLADEParams, FanSpeed};
@@ -14,6 +14,8 @@ use nih_plug_egui::widgets::generic_ui;
 #[cfg(feature = "plus")]
 use nih_plug_egui::widgets::generic_ui::GenericSlider;
 use nih_plug_egui::egui::{Button, Color32, Rounding, Style, Window, ecolor::Hsva, epaint::Shadow};
+
+const RAINBOW_SPEED: u64 = 100;
 
 struct EditorState {
     gif_frame: usize,
@@ -90,17 +92,18 @@ pub fn create(params: Arc<BLADEParams>, editor_state: Arc<EguiState>) -> Option<
             };
 
             let mut style = Style::default();
+            let rainbow = Color32::from(Hsva::new((ctx.frame_nr() % RAINBOW_SPEED) as f32 / RAINBOW_SPEED as f32, 1., 1., 1.));
             style.spacing.indent = 0.;
             style.visuals.window_shadow = Shadow::NONE;
             style.visuals.window_rounding = Rounding::ZERO;
             style.visuals.window_stroke.width = 2.0;
-            style.visuals.window_stroke.color = Color32::from(Hsva::new((ctx.frame_nr() % 100) as f32 / 100.0, 1., 1., 1.));
+            style.visuals.window_stroke.color = rainbow.clone();
 
-            Window::new("CREDITS").frame(Frame::popup(&style)).collapsible(false).open(&mut state.show_credits_window).show(ctx, |ui| {
-                ui.add(Label::new("BLADE"));
-                ui.add(Label::new("original concept by axo1otl"));
-                ui.add(Label::new("plugin by DRACONIUM"));
-                ui.add(Label::new("licensed under GPLv3 (thanks steinberg!)"));
+            Window::new("CREDITS").frame(Frame::popup(&style)).resizable(false).collapsible(false).open(&mut state.show_credits_window).show(ctx, |ui| {
+                ui.label(RichText::new("BLADE").strong().color(rainbow.clone()));
+                ui.label("original concept by axo1otl");
+                ui.label("plugin by DRACONIUM");
+                ui.label("licensed under GPLv3 (thanks steinberg!)");
             });
 
             #[cfg(feature = "plus")]

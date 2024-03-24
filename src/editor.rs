@@ -4,10 +4,10 @@ use image::codecs::gif::GifDecoder;
 use image::{AnimationDecoder, ImageFormat};
 use nih_plug::prelude::Editor;
 use nih_plug_egui::{create_egui_editor, EguiState};
-use nih_plug_egui::egui::{Align, CentralPanel, Frame, Image, ImageSource, Label, Layout, RichText, Sense, TopBottomPanel};
+use nih_plug_egui::egui::{include_image, Align, CentralPanel, Frame, Image, ImageSource, Layout, RichText, Sense, TopBottomPanel};
 
 use stopwatch::Stopwatch;
-use crate::{BLADEParams, FanSpeed};
+use crate::{BLADEParams, FanSpeed, VERSION};
 
 #[cfg(feature = "plus")]
 use nih_plug_egui::widgets::generic_ui;
@@ -69,7 +69,6 @@ pub fn create(params: Arc<BLADEParams>, editor_state: Arc<EguiState>) -> Option<
 
         TopBottomPanel::bottom("info").show(ctx, |ui| {
             ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                ui.add(Label::new("METALWINGS DSP, 2024"));
                 state.show_credits_window = state.show_credits_window || ui.add(Button::new("CREDITS")).clicked();
                 #[cfg(feature = "plus")]
                 {
@@ -97,13 +96,24 @@ pub fn create(params: Arc<BLADEParams>, editor_state: Arc<EguiState>) -> Option<
             style.visuals.window_shadow = Shadow::NONE;
             style.visuals.window_rounding = Rounding::ZERO;
             style.visuals.window_stroke.width = 2.0;
-            style.visuals.window_stroke.color = rainbow.clone();
+            style.visuals.window_stroke.color = rainbow;
 
-            Window::new("CREDITS").frame(Frame::popup(&style)).resizable(false).collapsible(false).open(&mut state.show_credits_window).show(ctx, |ui| {
-                ui.label(RichText::new("BLADE").strong().color(rainbow.clone()));
-                ui.label("original concept by axo1otl");
-                ui.label("plugin by DRACONIUM");
-                ui.label("licensed under GPLv3 (thanks steinberg!)");
+            Window::new("CREDITS").frame(Frame::popup(&style)).resizable(false).vscroll(true).collapsible(false).open(&mut state.show_credits_window).show(ctx, |ui| {
+                ui.image(include_image!("../assets/Cozy_logo.png"));
+                    ui.vertical_centered(|ui| {
+                        ui.heading(RichText::new("BLADE").strong().color(rainbow));
+                        ui.label(
+                            RichText::new(format!("Version {}", VERSION))
+                                .italics(),
+                        );
+                        ui.hyperlink_to("Homepage", env!("CARGO_PKG_HOMEPAGE"));
+                        ui.separator();
+                        ui.heading(RichText::new("Credits"));
+                        ui.label("Original concept by axo1otl");
+                        ui.label("Plugin by joe sorensen");
+                        ui.label("cozy dsp branding and design by gordo");
+                        ui.label("licensed under GPLv3 (thanks steinberg!)");
+                    });
             });
 
             #[cfg(feature = "plus")]

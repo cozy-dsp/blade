@@ -1,13 +1,12 @@
 #![feature(portable_simd)]
 
-mod filter;
 mod editor;
 
 use std::f32::consts;
 use std::simd::f32x2;
 use nih_plug::prelude::*;
 use std::sync::Arc;
-use crate::filter::{Biquad, BiquadCoefficients};
+use cozy_util::filter::{Biquad, BiquadCoefficients};
 
 const FAST_FREQ: f32 = 35.0;
 const MEDIUM_FREQ: f32 = 20.0;
@@ -16,6 +15,8 @@ const SLOW_FREQ: f32 = 5.0;
 const LFO_CENTER: f32 = 1_000.0;
 const LFO_RANGE: f32 = 500.0;
 const FILTER_RESONANCE: f32 = 2.0;
+
+pub const VERSION: &str = env!("VERGEN_GIT_DESCRIBE");
 
 pub struct BLADE {
     params: Arc<BLADEParams>,
@@ -143,11 +144,11 @@ impl BLADE {
 
 impl Plugin for BLADE {
     const NAME: &'static str = "BLADE";
-    const VENDOR: &'static str = "METALWINGS DSP";
+    const VENDOR: &'static str = "cozy dsp";
     const URL: &'static str = env!("CARGO_PKG_HOMEPAGE");
-    const EMAIL: &'static str = "metalwings@draconium.productions";
+    const EMAIL: &'static str = "hi@cozydsp.space";
 
-    const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+    const VERSION: &'static str = VERSION;
 
     const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[AudioIOLayout {
         main_input_channels: NonZeroU32::new(2),
@@ -223,7 +224,7 @@ impl Plugin for BLADE {
             let lfo_val = self.calculate_lfo(self.lfo_freq.next());
 
             if speed != FanSpeed::Off {
-                self.filter.coefficients = BiquadCoefficients::bandpass(self.sample_rate, range.mul_add(lfo_val, center), resonance);
+                self.filter.coefficients = BiquadCoefficients::bandpass_peak(self.sample_rate, range.mul_add(lfo_val, center), resonance);
                 // SAFETY: we're only ever working with 2 channels.
                 let samples = unsafe { channel_samples.to_simd_unchecked() };
                 let filtered = self.filter.process(samples);
@@ -236,7 +237,7 @@ impl Plugin for BLADE {
 }
 
 impl ClapPlugin for BLADE {
-    const CLAP_ID: &'static str = "dsp.metalwings.blade";
+    const CLAP_ID: &'static str = "space.cozydsp.blade";
     const CLAP_DESCRIPTION: Option<&'static str> = Some("An innovative filter that works on everything");
     const CLAP_MANUAL_URL: Option<&'static str> = Some(Self::URL);
     const CLAP_SUPPORT_URL: Option<&'static str> = None;
@@ -245,7 +246,7 @@ impl ClapPlugin for BLADE {
 }
 
 impl Vst3Plugin for BLADE {
-    const VST3_CLASS_ID: [u8; 16] = *b"dmetalwingsblade";
+    const VST3_CLASS_ID: [u8; 16] = *b"COZYDSP_filblade";
 
     const VST3_SUBCATEGORIES: &'static [Vst3SubCategory] =
         &[Vst3SubCategory::Fx, Vst3SubCategory::Filter];

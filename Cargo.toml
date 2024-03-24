@@ -1,10 +1,9 @@
 [package]
 name = "blade"
-version = "0.1.0"
 edition = "2021"
-authors = ["METALWINGS DSP <metalwings@draconium.productions>"]
+authors = ["cozy dsp <hi@cozydsp.space>"]
 license = "GPL-3.0-or-later"
-homepage = "https://crouton.net"
+homepage = "https://cozydsp.space"
 description = "An innovative filter that works on everything"
 
 [workspace]
@@ -22,10 +21,11 @@ plus = []
 editor = []
 
 [dependencies]
+cozy-util = { git = "https://github.com/cozy-dsp/cozy-util.git", version = "0.1.0" }
 nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", features = ["assert_process_allocs", "simd", "standalone"] }
 nih_plug_egui = {git = "https://github.com/robbert-vdh/nih-plug.git"}
-egui_extras = {version = "0.26.2", features = ["all_loaders"]}
-image = {version = "0.24.9", features = ["gif", "png"]}
+egui_extras = {version = "0.26.2", features = ["image"]}
+image = {version = "0.24.9", default-features = false, features = ["gif", "png"]}
 stopwatch = "0.0.7"
 
 [profile.release]
@@ -35,3 +35,7 @@ strip = "symbols"
 inherits = "release"
 debug = true
 strip = "none"
+
+[build-dependencies]
+anyhow = "1.0.81"
+vergen = { version = "8.3.1", features = ["git", "gitcl"] }

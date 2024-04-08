@@ -6,7 +6,7 @@ use nih_plug::prelude::Editor;
 use nih_plug_egui::{create_egui_editor, EguiState};
 use nih_plug_egui::egui::{include_image, Align, CentralPanel, Frame, Image, ImageSource, Layout, RichText, Sense, TopBottomPanel};
 
-use stopwatch::Stopwatch;
+use libsw::Sw;
 use crate::{BLADEParams, FanSpeed, VERSION};
 
 #[cfg(feature = "plus")]
@@ -19,7 +19,7 @@ const RAINBOW_SPEED: u64 = 100;
 
 struct EditorState {
     gif_frame: usize,
-    stopwatch: Stopwatch,
+    stopwatch: Sw,
     show_credits_window: bool,
     #[cfg(feature = "plus")]
     show_settings_window: bool
@@ -29,7 +29,7 @@ impl EditorState {
     fn new() -> Self {
         Self {
             gif_frame: 0,
-            stopwatch: Stopwatch::start_new(),
+            stopwatch: Sw::new_started(),
             show_credits_window: false,
             #[cfg(feature = "plus")]
             show_settings_window: false
@@ -61,18 +61,18 @@ pub fn create(params: Arc<BLADEParams>, editor_state: Arc<EguiState>) -> Option<
             FanSpeed::Slow => 60
         };
 
-        if params.speed.value() != FanSpeed::Off && state.stopwatch.elapsed_ms() >= frame_time {
-            state.stopwatch.restart();
+        if params.speed.value() != FanSpeed::Off && state.stopwatch.elapsed().as_millis() as i128 >= frame_time {
+            state.stopwatch.reset_in_place();
             state.gif_frame += 1;
             state.gif_frame %= frames.len() - 1;
         }
 
         TopBottomPanel::bottom("info").show(ctx, |ui| {
             ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                state.show_credits_window = state.show_credits_window || ui.add(Button::new("CREDITS")).clicked();
+                state.show_credits_window |= ui.add(Button::new("CREDITS")).clicked();
                 #[cfg(feature = "plus")]
                 {
-                    state.show_settings_window = state.show_settings_window || ui.add(Button::new("SETTINGS")).clicked();
+                    state.show_settings_window |= ui.add(Button::new("SETTINGS")).clicked();
                 }
             })
         });

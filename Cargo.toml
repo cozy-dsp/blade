@@ -26,7 +26,7 @@ nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", features = ["a
 nih_plug_egui = {git = "https://github.com/robbert-vdh/nih-plug.git"}
 egui_extras = {version = "0.26.2", features = ["image"]}
 image = {version = "0.24.9", default-features = false, features = ["gif", "png"]}
-stopwatch = "0.0.7"
+libsw = "3.3.1"
 
 [profile.release]
 strip = "symbols"

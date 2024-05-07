@@ -95,7 +95,7 @@ jobs:
           mv target/bundled/* "$ARCHIVE_NAME/$ARCHIVE_NAME"
       - name: Add an OS-specific readme file with installation instructions
         run: cp ".gitea/workflows/readme-${{ runner.os }}.txt" "$ARCHIVE_NAME/$ARCHIVE_NAME/README.txt"
-      - uses: manleydev/butler-publish-itchio-action@master
+      - uses: yeslayla/butler-publish-itchio-action@v1.0.3
         env: 
           BUTLER_CREDENTIALS: ${{ secrets.BUTLER_CREDENTIALS }}
           VERSION: ${{ env.ARCHIVE_VERSION }}

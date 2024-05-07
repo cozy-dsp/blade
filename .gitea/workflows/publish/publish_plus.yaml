@@ -102,4 +102,4 @@ jobs:
           itch_game: blade
           version: ${{ env.ARCHIVE_VERSION }}
           files: |
-            ${{ matrix.channel }} ${{ env.ARCHIVE_NAME }}
+            ${{ matrix.channel }}-plus ${{ env.ARCHIVE_NAME }}

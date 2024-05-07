@@ -18,13 +18,14 @@ required-features = ["editor"]
 
 [features]
 plus = []
-editor = []
+editor = ["nih_plug/standalone"]
 
 [dependencies]
-cozy-util = { git = "https://github.com/cozy-dsp/cozy-util.git", version = "0.1.0" }
-nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", features = ["assert_process_allocs", "simd", "standalone"] }
+cozy-util = { git = "https://vcs.cozydsp.space/cozy-dsp/cozy-util", version = "0.1.0" }
+cozy-ui = { git = "https://vcs.cozydsp.space/cozy-dsp/cozy-ui"}
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", features = ["assert_process_allocs", "simd"] }
 nih_plug_egui = {git = "https://github.com/robbert-vdh/nih-plug.git"}
-egui_extras = {version = "0.26.2", features = ["image"]}
+egui_extras = {version = "0.27", features = ["image"]}
 image = {version = "0.24.9", default-features = false, features = ["gif", "png"]}
 libsw = "3.3.1"
 

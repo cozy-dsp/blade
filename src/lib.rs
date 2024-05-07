@@ -2,11 +2,11 @@
 
 mod editor;
 
+use cozy_util::filter::{Biquad, BiquadCoefficients};
+use nih_plug::prelude::*;
 use std::f32::consts;
 use std::simd::f32x2;
-use nih_plug::prelude::*;
 use std::sync::Arc;
-use cozy_util::filter::{Biquad, BiquadCoefficients};
 
 const FAST_FREQ: f32 = 35.0;
 const MEDIUM_FREQ: f32 = 20.0;
@@ -23,7 +23,7 @@ pub struct BLADE {
     sample_rate: f32,
     lfo_freq: Smoother<f32>,
     lfo_phase: f32,
-    filter: Biquad<f32x2>
+    filter: Biquad<f32x2>,
 }
 
 #[derive(Default, Enum, PartialEq)]
@@ -32,7 +32,7 @@ enum FanSpeed {
     Off,
     Fast,
     Medium,
-    Slow
+    Slow,
 }
 
 impl FanSpeed {
@@ -50,7 +50,7 @@ impl FanSpeed {
             Self::Fast => Ok(FAST_FREQ),
             Self::Medium => Ok(MEDIUM_FREQ),
             Self::Slow => Ok(SLOW_FREQ),
-            Self::Off => Err(())
+            Self::Off => Err(()),
         }
     }
 }
@@ -63,6 +63,8 @@ struct BLADEParams {
     /// gain parameter is stored as linear gain while the values are displayed in decibels.
     #[id = "speed"]
     pub speed: EnumParam<FanSpeed>,
+    #[id = "safety_switch"]
+    pub safety_switch: BoolParam,
     #[cfg(feature = "plus")]
     #[id = "lfo_center"]
     pub lfo_center: FloatParam,
@@ -71,7 +73,7 @@ struct BLADEParams {
     pub lfo_range: FloatParam,
     #[cfg(feature = "plus")]
     #[id = "filter_resonance"]
-    pub filter_resonance: FloatParam
+    pub filter_resonance: FloatParam,
 }
 
 impl Default for BLADE {
@@ -81,7 +83,7 @@ impl Default for BLADE {
             lfo_freq: Smoother::new(SmoothingStyle::Linear(20.0)),
             lfo_phase: 0.,
             sample_rate: 0.,
-            filter: Biquad::default()
+            filter: Biquad::default(),
         }
     }
 }
@@ -90,7 +92,8 @@ impl Default for BLADE {
 impl Default for BLADEParams {
     fn default() -> Self {
         Self {
-            speed: EnumParam::new("Speed", FanSpeed::default())
+            speed: EnumParam::new("Speed", FanSpeed::default()),
+            safety_switch: BoolParam::new("Safety Switch", true).hide(),
         }
     }
 }
@@ -100,18 +103,33 @@ impl Default for BLADEParams {
     fn default() -> Self {
         Self {
             speed: EnumParam::new("Speed", FanSpeed::default()).hide_in_generic_ui(),
-            lfo_center: FloatParam::new("LFO Center", LFO_CENTER, FloatRange::Linear {
-                min: 500.0,
-                max: 5_000.0
-            }).with_unit(" Hz").with_step_size(0.01),
-            lfo_range: FloatParam::new("LFO Range", LFO_RANGE, FloatRange::Linear {
-                min: 100.0,
-                max: 2_000.0
-            }).with_unit(" Hz").with_step_size(0.01),
-            filter_resonance: FloatParam::new("Resonance", FILTER_RESONANCE, FloatRange::Linear {
-                min: 1.0,
-                max: 4.0
-            }).with_step_size(0.01)
+            safety_switch: BoolParam::new("Safety Switch", true).hide(),
+            lfo_center: FloatParam::new(
+                "LFO Center",
+                LFO_CENTER,
+                FloatRange::Linear {
+                    min: 500.0,
+                    max: 5_000.0,
+                },
+            )
+            .with_unit(" Hz")
+            .with_step_size(0.01),
+            lfo_range: FloatParam::new(
+                "LFO Range",
+                LFO_RANGE,
+                FloatRange::Linear {
+                    min: 100.0,
+                    max: 2_000.0,
+                },
+            )
+            .with_unit(" Hz")
+            .with_step_size(0.01),
+            filter_resonance: FloatParam::new(
+                "Resonance",
+                FILTER_RESONANCE,
+                FloatRange::Linear { min: 1.0, max: 4.0 },
+            )
+            .with_step_size(0.01),
         }
     }
 }
@@ -132,7 +150,11 @@ impl BLADE {
     #[cfg(feature = "plus")]
     #[inline]
     fn get_param_values(&self) -> (f32, f32, f32) {
-        (self.params.lfo_center.value(), self.params.lfo_range.value(), self.params.filter_resonance.value())
+        (
+            self.params.lfo_center.value(),
+            self.params.lfo_range.value(),
+            self.params.filter_resonance.value(),
+        )
     }
 
     #[cfg(not(feature = "plus"))]
@@ -156,7 +178,6 @@ impl Plugin for BLADE {
 
         ..AudioIOLayout::const_default()
     }];
-
 
     const MIDI_INPUT: MidiConfig = MidiConfig::None;
     const MIDI_OUTPUT: MidiConfig = MidiConfig::None;
@@ -185,11 +206,16 @@ impl Plugin for BLADE {
         self.sample_rate = buffer_config.sample_rate;
         #[cfg(not(feature = "plus"))]
         {
-            self.filter.coefficients = BiquadCoefficients::bandpass(buffer_config.sample_rate, 1_000., 2.);
+            self.filter.coefficients =
+                BiquadCoefficients::bandpass(buffer_config.sample_rate, 1_000., 2.);
         }
         #[cfg(feature = "plus")]
         {
-            self.filter.coefficients = BiquadCoefficients::bandpass(buffer_config.sample_rate, self.params.lfo_center.value(), self.params.filter_resonance.value());
+            self.filter.coefficients = BiquadCoefficients::bandpass(
+                buffer_config.sample_rate,
+                self.params.lfo_center.value(),
+                self.params.filter_resonance.value(),
+            );
         }
         true
     }
@@ -211,9 +237,12 @@ impl Plugin for BLADE {
         let speed = self.params.speed.value();
         match speed {
             FanSpeed::Off => {}
-            _ => {
-                self.lfo_freq.set_target(self.sample_rate, speed.to_freq().expect("FanSpeed is somehow off and yet we reached this branch, what the fuck?"))
-            }
+            _ => self.lfo_freq.set_target(
+                self.sample_rate,
+                speed.to_freq().expect(
+                    "FanSpeed is somehow off and yet we reached this branch, what the fuck?",
+                ),
+            ),
         }
 
         // done this way to make refactoring out plus logic easy
@@ -224,7 +253,16 @@ impl Plugin for BLADE {
             let lfo_val = self.calculate_lfo(self.lfo_freq.next());
 
             if speed != FanSpeed::Off {
-                self.filter.coefficients = BiquadCoefficients::bandpass_peak(self.sample_rate, range.mul_add(lfo_val, center), resonance);
+                let frequency = if self.params.safety_switch.value() {
+                    range
+                        .mul_add(lfo_val, center)
+                        .clamp(0.0, self.sample_rate / 2.0)
+                } else {
+                    range.mul_add(lfo_val, center)
+                };
+
+                self.filter.coefficients =
+                    BiquadCoefficients::bandpass_peak(self.sample_rate, frequency, resonance);
                 // SAFETY: we're only ever working with 2 channels.
                 let samples = unsafe { channel_samples.to_simd_unchecked() };
                 let filtered = self.filter.process(samples);
@@ -238,11 +276,16 @@ impl Plugin for BLADE {
 
 impl ClapPlugin for BLADE {
     const CLAP_ID: &'static str = "space.cozydsp.blade";
-    const CLAP_DESCRIPTION: Option<&'static str> = Some("An innovative filter that works on everything");
+    const CLAP_DESCRIPTION: Option<&'static str> =
+        Some("An innovative filter that works on everything");
     const CLAP_MANUAL_URL: Option<&'static str> = Some(Self::URL);
     const CLAP_SUPPORT_URL: Option<&'static str> = None;
 
-    const CLAP_FEATURES: &'static [ClapFeature] = &[ClapFeature::AudioEffect, ClapFeature::Stereo, ClapFeature::Filter];
+    const CLAP_FEATURES: &'static [ClapFeature] = &[
+        ClapFeature::AudioEffect,
+        ClapFeature::Stereo,
+        ClapFeature::Filter,
+    ];
 }
 
 impl Vst3Plugin for BLADE {

@@ -1,14 +1,6 @@
-name: Automated Builds
+name: Publish - PLUS
 
 on:
-  push:
-    branches:
-      - '**'
-    tags:
-      - '*'
-  pull_request:
-    branches:
-      - master
   release:
     type: [published]
 
@@ -23,9 +15,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - { name: ubuntu-20.04,       os: ubuntu-20.04,   cross-target: '' }
-          - { name: macos-universal,    os: macos-10,       cross-target: aarch64-apple-darwin }
-          - { name: windows,            os: windows-latest, cross-target: '' }
+          - { name: ubuntu-20.04,       os: ubuntu-20.04,   cross-target: '', channel: 'linux' }
+          - { name: macos-universal,    os: macos-10,       cross-target: aarch64-apple-darwin, channel: 'osx-universal' }
+          - { name: windows,            os: windows-latest, cross-target: '', channel: 'win' }
     name: Package plugin binaries
     runs-on: ${{ matrix.os }}
     steps:
@@ -79,20 +71,23 @@ jobs:
           if [[ $runner_name = 'macos-universal' ]]; then
             export MACOSX_DEPLOYMENT_TARGET=10.13
             export RUSTFLAGS="-C link-args=-Wl,-undefined,dynamic_lookup"
-            cargo xtask bundle-universal "${package_args[@]}" --release
+            cargo xtask bundle-universal "${package_args[@]}" --release --features plus
           else
             cross_target=${{ matrix.cross-target }}
             if [[ -n $cross_target ]]; then
               package_args+=("--target" "$cross_target")
             fi
 
-            cargo xtask bundle "${package_args[@]}" --release
+            cargo xtask bundle "${package_args[@]}" --release --features plus
           fi
 
       - name: Determine build archive name
         run: |
           # Windows (usually) doesn't like colons in file names
-          echo "ARCHIVE_NAME=blade-$(git describe --always)-${{ matrix.name }}" >> "$GITHUB_ENV"
+          echo "ARCHIVE_NAME=blade-plus-${{ matrix.name }}" >> "$GITHUB_ENV"
+      - name: Determine version for itch
+        run: |
+          echo "ARCHIVE_VERSION=$(git describe --always)" >> "$GITHUB_ENV"
       - name: Move all packaged plugin into a directory
         run: |
           # GitHub Action strips the top level directory, great, have another one
@@ -100,7 +95,9 @@ jobs:
           mv target/bundled/* "$ARCHIVE_NAME/$ARCHIVE_NAME"
       - name: Add an OS-specific readme file with installation instructions
         run: cp ".gitea/workflows/readme-${{ runner.os }}.txt" "$ARCHIVE_NAME/$ARCHIVE_NAME/README.txt"
-      - uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.ARCHIVE_NAME }}
-          path: ${{ env.ARCHIVE_NAME }}
+      - uses: manleydev/butler-publish-itchio-action@master
+        env: 
+          BUTLER_CREDENTIALS: ${{ secrets.BUTLER_CREDENTIALS }}
+          VERSION: ${{ env.ARCHIVE_VERSION }}
+          PACKAGE: ${{ env.ARCHIVE_NAME }}
+          CHANNEL: ${{ matrix.channel }}

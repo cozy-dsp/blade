@@ -1,8 +1,6 @@
-use cozy_ui::util::get_set;
 use form_urlencoded::byte_serialize;
 use image::codecs::gif::GifDecoder;
 use image::{AnimationDecoder, ImageFormat};
-use nih_plug::params::Param;
 use nih_plug::prelude::Editor;
 use nih_plug_egui::egui::{
     include_image, Align, CentralPanel, Frame, Image, ImageSource, Layout, RichText, Sense,
@@ -16,6 +14,11 @@ use crate::{BLADEParams, FanSpeed, VERSION};
 use libsw::Sw;
 
 use nih_plug_egui::egui::{ecolor::Hsva, epaint::Shadow, Button, Color32, Rounding, Style, Window};
+
+#[cfg(feature = "plus")]
+use cozy_ui::util::get_set;
+#[cfg(feature = "plus")]
+use nih_plug::params::Param;
 
 const RAINBOW_SPEED: u64 = 100;
 
@@ -84,7 +87,7 @@ pub fn create(params: Arc<BLADEParams>, editor_state: Arc<EguiState>) -> Option<
 
             TopBottomPanel::bottom("info").show(ctx, |ui| {
                 ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                    state.show_credits_window |= ui.add(Button::new("CREDITS")).clicked();
+                    state.show_credits_window |= ui.add(Button::new("ABOUT")).clicked();
                     #[cfg(feature = "plus")]
                     {
                         state.show_settings_window |= ui.add(Button::new("SETTINGS")).clicked();

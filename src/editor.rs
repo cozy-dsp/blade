@@ -147,7 +147,7 @@ pub fn create(params: Arc<BLADEParams>, editor_state: Arc<EguiState>) -> Option<
                                 ui.label("Original concept by axo1otl");
                                 ui.label("Plugin by joe sorensen");
                                 ui.label("cozy dsp branding and design by gordo");
-                                ui.label("licensed under GPLv3 (thanks steinberg!)");
+                                ui.label("licensed under GPLv3");
                             });
                         });
 

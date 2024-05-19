@@ -1,4 +1,5 @@
 use cozy_ui::util::get_set;
+use form_urlencoded::byte_serialize;
 use image::codecs::gif::GifDecoder;
 use image::{AnimationDecoder, ImageFormat};
 use nih_plug::params::Param;
@@ -119,7 +120,7 @@ pub fn create(params: Arc<BLADEParams>, editor_state: Arc<EguiState>) -> Option<
                     style.visuals.window_stroke.width = 2.0;
                     style.visuals.window_stroke.color = rainbow;
 
-                    Window::new("CREDITS")
+                    Window::new("ABOUT")
                         .frame(Frame::popup(&style))
                         .resizable(false)
                         .vscroll(true)
@@ -130,7 +131,14 @@ pub fn create(params: Arc<BLADEParams>, editor_state: Arc<EguiState>) -> Option<
                             ui.vertical_centered(|ui| {
                                 ui.heading(RichText::new("BLADE").strong().color(rainbow));
                                 ui.label(RichText::new(format!("Version {}", VERSION)).italics());
-                                ui.hyperlink_to("Homepage", env!("CARGO_PKG_HOMEPAGE"));
+                                if ui.hyperlink_to("Homepage", env!("CARGO_PKG_HOMEPAGE")).clicked() {
+                                    let _ = open::that(env!("CARGO_PKG_HOMEPAGE"));
+                                }
+        
+                                let report_url = format!("{}/issues/new?template=.gitea%2fISSUE_TEMPLATE%2fbug-report.yaml&version={}", env!("CARGO_PKG_REPOSITORY"), byte_serialize(VERSION.as_bytes()).collect::<String>());
+                                if ui.hyperlink_to("Report a bug", &report_url).clicked() {
+                                    let _ = open::that(report_url);
+                                }
                                 ui.separator();
                                 ui.heading(RichText::new("Credits"));
                                 ui.label("Original concept by axo1otl");
